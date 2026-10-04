@@ -1,0 +1,27 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "deep-websearch",
+  "version": "0.1.0",
+  "description": "Configuration-driven deep web research with source availability checks, bounded query expansion, deduplicated evidence, and honest coverage reports.",
+  "author": { "name": "ywlg" },
+  "license": "MIT",
+  "keywords": ["web search", "deep research", "MCP", "source coverage"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Deep Websearch",
+        "shortDescription": "配置驱动的多源深度网络搜索",
+        "longDescription": "使用已配置的搜索源开展多轮网络研究，合并重复链接、保留证据出处，并准确报告未搜索的平台。提供本地 MCP 工具和研究技能；Windows 缺少搜索源时提醒一次并继续搜索。",
+        "developerName": "ywlg",
+        "category": "Productivity",
+        "capabilities": ["Read"],
+        "logo": "./assets/icon.svg",
+        "composerIcon": "./assets/icon.svg",
+        "defaultPrompt": [
+          "广泛搜索最近 AI 视频生成有哪些机会，并说明本轮搜索覆盖了哪些平台。",
+          "深度研究这个主题，用原始网页交叉核实关键结论并给出引用。"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Deep Websearch">
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="#102B3A"/>
+  <g fill="none" stroke="#60D7C3" stroke-width="4">
+    <circle cx="58" cy="56" r="31"/>
+    <ellipse cx="58" cy="56" rx="13" ry="31"/>
+    <path d="M27 56h62M32 40h52M32 72h52"/>
+  </g>
+  <path d="m81 80 22 23" stroke="#F5F0D8" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="58" cy="56" r="31" fill="none" stroke="#F5F0D8" stroke-width="5"/>
+</svg>

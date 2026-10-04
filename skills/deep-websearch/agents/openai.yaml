@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deep Websearch"
+  short_description: "多源搜索、证据核实和覆盖报告"
+  default_prompt: "广泛搜索这个主题，读取关键来源、交叉核实结论，并报告已搜索和未搜索的平台。"
