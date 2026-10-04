@@ -1,6 +1,6 @@
 {
   "name": "deep-websearch",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Configuration-driven deep web research with source availability checks, bounded query expansion, deduplicated evidence, and honest coverage reports.",
   "author": { "name": "ywlg" },
   "license": "MIT",

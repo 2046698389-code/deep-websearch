@@ -179,7 +179,7 @@ class RedditAdapter(BaseAdapter):
 
     def _headers(self) -> dict[str, str]:
         return {"User-Agent": self.settings.env.get(
-            "REDDIT_USER_AGENT", "python:deep-websearch:0.1.0 (local research plugin)"
+            "REDDIT_USER_AGENT", "python:deep-websearch:0.1.1 (local research plugin)"
         )}
 
     async def _access_token(self) -> str:
@@ -316,7 +316,7 @@ class BilibiliAdapter(BaseAdapter):
     required_env: tuple[str, ...] = ()
     endpoint = "https://api.bilibili.com/x/web-interface/search/type"
     _headers = {
-        "User-Agent": "deep-websearch/0.1.0 (read-only public website research)",
+        "User-Agent": "deep-websearch/0.1.1 (read-only public website research)",
         "Referer": "https://search.bilibili.com/",
     }
 

@@ -6,7 +6,7 @@
 
 ## 快速开始
 
-当前 `deep-websearch-0.1.0.zip` 是面向 Codex 和本地 MCP 客户端的插件包，服务器通过本机 Python 的 stdio 运行。ChatGPT 网页端使用它的搜索工具，还需要单独连接 HTTPS MCP 服务或 Secure MCP Tunnel；上传 ZIP 不会自动部署服务器。接入方法见下方“在 ChatGPT 网页端使用”。
+当前 `deep-websearch-0.1.1.zip` 是面向 Codex 和本地 MCP 客户端的插件包，服务器通过本机 Python 的 stdio 运行。ChatGPT 网页端使用它的搜索工具，还需要单独连接 HTTPS MCP 服务或 Secure MCP Tunnel；上传 ZIP 不会自动部署服务器。接入方法见下方“在 ChatGPT 网页端使用”。
 
 生成交付 ZIP 请使用 `python .\scripts\package_plugin.py`。不要直接压缩整个项目目录，否则会把 `.env`、`.git`、`.venv` 和缓存一起打包。
 
@@ -85,11 +85,47 @@ Windows 路径在 JSON 中需要双反斜杠，或使用正斜杠。客户端须
 
 ## 在 ChatGPT 网页端使用
 
-网页端需要先建立 MCP 连接，再使用完整插件。可将服务器另行部署为可访问的 HTTPS Streamable HTTP MCP 服务，并配置相应鉴权；也可通过 Secure MCP Tunnel 连接运行在本机的服务器。具体要求见[官方连接与测试文档](https://developers.openai.com/plugins/deploy/connect-chatgpt)及[Secure MCP Tunnel 文档](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)。
+网页端需要先建立 MCP 连接。本项目提供 `scripts/chatgpt_tunnel.py`，使用官方 Secure MCP Tunnel 把现有 `scripts/run_server.py` stdio 服务器接入 ChatGPT。也可另行部署 HTTPS Streamable HTTP 服务。具体要求见[官方连接与测试文档](https://developers.openai.com/plugins/deploy/connect-chatgpt)及[Secure MCP Tunnel 文档](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)。
 
-现有本地服务器入口是 `scripts/run_server.py`，启动命令为 `python scripts/run_server.py`。选择隧道方案时，用这个已有的 stdio 进程作为上游，保留本机 `.env` 和 `config.yaml`，或使用前述共享配置目录。选择托管方案时，需另外提供 HTTP 传输、部署和鉴权，把所需凭证配置在服务器运行环境中。凭证不应放入上传 ZIP。
+以下命令在已解压的常规源码包目录中执行，隧道和搜索服务器运行在用户自己的机器上。
 
-当前仓库提供本地服务器源码和插件包，尚未提供已部署的 HTTPS 地址、已建立的隧道或已注册的 ChatGPT MCP 连接。完成连接并验证工具发现、来源状态和一次实际搜索后，才能确认网页端可用；仅上传当前 ZIP 不能完成这些步骤。
+1. 按 Secure MCP Tunnel 官方文档下载 `tunnel-client`。Windows 必须完整解压工具 ZIP，保留随附文件；可把工具目录加入 PATH，或用下面命令的 `--client` 指定可执行文件的绝对路径。在项目目录执行 `python scripts/bootstrap.py`，准备搜索服务器依赖。
+2. 在自己的 OpenAI 组织中创建隧道，并关联要使用的 ChatGPT 工作区。记录自己的隧道 ID，创建 Restricted 运行密钥，仅授予 `Tunnels Read` / `Tunnels Use` 权限。
+3. 在项目根目录创建私有 `.env.tunnel`，填写下面两个空值。不要提交或上传这个文件。
+
+```dotenv
+CONTROL_PLANE_API_KEY=
+CONTROL_PLANE_TUNNEL_ID=
+```
+
+隧道运行密钥用于工具与隧道控制面的连接，不是搜索服务或 LLM 的 API Key。已有 `.env` 仍保存 YouTube、Brave 等搜索访问配置；`config.yaml` 仍决定来源和搜索预算。隧道脚本不替换这两个文件。
+
+如果浏览器可访问 OpenAI，但隧道客户端直连失败，可在 `.env.tunnel` 中另设 `CONTROL_PLANE_HTTP_PROXY`，填写本机已有 HTTP 代理的完整地址。这个设置只用于隧道控制面；脚本不会更改系统代理。代理选项见[官方客户端配置说明](https://github.com/openai/tunnel-client/blob/v0.0.15/docs/configuration.md#outbound-http-proxy)。
+
+4. 先检查配置，再前台启动隧道。工具已在 PATH 或脚本可发现的本机工具目录时，执行：
+
+```powershell
+python .\scripts\chatgpt_tunnel.py doctor
+python .\scripts\chatgpt_tunnel.py run
+```
+
+若需要指定工具位置，将下面路径替换为实际路径；`run` 也接受相同的 `--client` 参数：
+
+```powershell
+python .\scripts\chatgpt_tunnel.py doctor --client "C:\Tools\tunnel-client\tunnel-client.exe"
+```
+
+脚本读取 `.env.tunnel`，已有进程环境变量优先；隧道 profile 默认保存在共享目录的 `tunnel-profiles/deep-websearch.yaml`，已有 profile 会保留并核对隧道 ID。可通过 `--profile` / `--profile-dir` 指定其他 profile。电脑、网络和 `run` 进程须持续运行，网页端才能访问这台机器上的搜索服务器。
+
+5. 在 ChatGPT 的 MCP 连接配置中选择 `Tunnel`，填写同一个隧道 ID。连接后核对 `source_status`、`broad_search`、`fetch_page`、`fetch_pages` 四个工具；先调用 `source_status`，再发起一次小范围搜索，确认结果和缺失来源报告实际返回。隧道连接成功与搜索平台配置可用是两个检查步骤。
+
+当前常规 ZIP 仍是本地源码包。若需要带技能的私有 ChatGPT 插件包，须先获得并核实当前账户或工作区可使用的**已注册 MCP 应用 ID**；它与隧道 ID 不同。将以下占位文字替换为该真实 ID 后执行：
+
+```powershell
+python .\scripts\package_plugin.py --chatgpt-app-id "<已核实的 MCP 应用 ID>"
+```
+
+这会另建 `deep-websearch-0.1.1-chatgpt.zip`，生成指向该应用的 `.app.json`，保留技能和图标，省略本地启动配置、源码、依赖和凭证；原始清单及常规源码 ZIP 不变。打包器只检查 ID 格式，不能验证账号权限，也不会注册或部署 MCP 服务。完成真实连接与工具测试前，不能据此认定完整网页插件已可用。
 
 ## 配置与可用性
 

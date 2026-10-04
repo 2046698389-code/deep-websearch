@@ -82,8 +82,10 @@ def test_cached_launcher_uses_shared_runtime_and_cached_source(tmp_path):
     assert Path(actual["code"]) == package / "__main__.py"
     assert actual["argv"][-1] == "serve"
     # Installing a newer cache copy keeps the same stable runtime and home.
+    # A new installed version is a separate copy. Renaming a just-executed
+    # directory can fail transiently on Windows while OS scanners hold it.
     renamed_cache = cached.with_name("deep-websearch-new-version")
-    cached.rename(renamed_cache)
+    shutil.copytree(cached, renamed_cache)
     response = subprocess.run(
         [sys.executable, str(renamed_cache / "scripts" / "run_server.py")],
         env=environment, text=True, capture_output=True, timeout=30, check=True,
@@ -146,3 +148,67 @@ def test_archive_excludes_links_and_linked_directory_contents(tmp_path, monkeypa
         names = set(archive.namelist())
     assert "deep-websearch/README.md" not in names
     assert not any("linked" in name or "outside.txt" in name for name in names)
+
+
+def test_chatgpt_package_binds_verified_id_without_local_runtime(tmp_path, monkeypatch):
+    source, destination = distribution_fixture(tmp_path, monkeypatch)
+    manifest = json.loads((source / "plugin.json").read_text(encoding="utf-8"))
+    manifest["description"] = "Private research plugin"
+    manifest["extensions"] = {"com.openai": {"interface": {"displayName": "Deep Websearch"}}}
+    (source / "plugin.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (source / ".codex-plugin").mkdir()
+    overlay = {"name": "deep-websearch", "version": "0.1.0", "mcpServers": "./.mcp.json"}
+    (source / ".codex-plugin" / "plugin.json").write_text(json.dumps(overlay), encoding="utf-8")
+    for name in ("mcp.json", ".mcp.json", "pyproject.toml", "config.example.yaml", ".env.example"):
+        (source / name).write_text("local-only fixture", encoding="utf-8")
+    (source / ".env.tunnel").write_text("CONTROL_PLANE_API_KEY=private-test-fixture\n", encoding="utf-8")
+    for directory in ("src", "scripts", "tests", ".agents", ".github", "skills/research"):
+        target = source / directory
+        target.mkdir(parents=True)
+        (target / "fixture.txt").write_text("fixture", encoding="utf-8")
+    (source / "README.md").write_text("Local source setup and private connection guide", encoding="utf-8")
+    (source / "LICENSE").write_text("MIT", encoding="utf-8")
+    before = {name: (source / name).read_bytes() for name in ("plugin.json", ".codex-plugin/plugin.json")}
+    app_id = "asdk_app_offline_test_fixture"
+    package_plugin.package(destination, chatgpt_app_id=app_id)
+    with zipfile.ZipFile(destination) as archive:
+        names = set(archive.namelist())
+        portable = json.loads(archive.read("deep-websearch/plugin.json"))
+        compatibility = json.loads(archive.read("deep-websearch/.codex-plugin/plugin.json"))
+        applications = json.loads(archive.read("deep-websearch/.app.json"))
+    assert applications == {"apps": {"deep-websearch": {"id": app_id}}}
+    assert portable["extensions"]["com.openai"]["apps"] == "./.app.json"
+    assert compatibility["apps"] == "./.app.json"
+    assert compatibility["skills"] == "./skills/"
+    assert "mcpServers" not in compatibility
+    assert portable["version"] == compatibility["version"] == manifest["version"]
+    assert "deep-websearch/skills/research/fixture.txt" in names
+    assert "deep-websearch/assets/icon.svg" in names
+    assert not any(
+        name.startswith(tuple(f"deep-websearch/{part}/" for part in ("src", "scripts", "tests", ".agents", ".github")))
+        for name in names
+    )
+    assert not any(name.endswith(("mcp.json", "pyproject.toml", "config.example.yaml", ".env.example", ".env.tunnel"))
+                   for name in names)
+    assert before == {name: (source / name).read_bytes() for name in before}
+    assert not (source / ".app.json").exists()
+
+
+@pytest.mark.parametrize("app_id", ["", "deep-websearch", "https://mcp.example.test", "asdk_app_",
+                                       "connector_value/../../", "asdk_app_value\n"])
+def test_chatgpt_package_rejects_malformed_ids_without_writing(tmp_path, monkeypatch, app_id):
+    _, destination = distribution_fixture(tmp_path, monkeypatch)
+    with pytest.raises(ValueError, match="registered MCP application ID"):
+        package_plugin.package(destination, chatgpt_app_id=app_id)
+    assert not destination.exists()
+
+
+def test_chatgpt_cli_default_output_is_separate(tmp_path, monkeypatch, capsys):
+    source, _ = distribution_fixture(tmp_path, monkeypatch)
+    local_archive = source.parent / "deep-websearch-0.1.0.zip"
+    local_archive.write_bytes(b"existing-local-package-fixture")
+    monkeypatch.setattr(sys, "argv", ["package_plugin.py", "--chatgpt-app-id", "connector_offline_fixture"])
+    package_plugin.main()
+    assert local_archive.read_bytes() == b"existing-local-package-fixture"
+    assert (source.parent / "deep-websearch-0.1.0-chatgpt.zip").is_file()
+    assert "deep-websearch-0.1.0-chatgpt.zip" in capsys.readouterr().out
