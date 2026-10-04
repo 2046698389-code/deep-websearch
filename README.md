@@ -6,6 +6,10 @@
 
 ## 快速开始
 
+当前 `deep-websearch-0.1.0.zip` 是面向 Codex 和本地 MCP 客户端的插件包，服务器通过本机 Python 的 stdio 运行。ChatGPT 网页端使用它的搜索工具，还需要单独连接 HTTPS MCP 服务或 Secure MCP Tunnel；上传 ZIP 不会自动部署服务器。接入方法见下方“在 ChatGPT 网页端使用”。
+
+生成交付 ZIP 请使用 `python .\scripts\package_plugin.py`。不要直接压缩整个项目目录，否则会把 `.env`、`.git`、`.venv` 和缓存一起打包。
+
 需要 Python 3.11 或更新版本。下载仓库或插件 ZIP，进入项目目录后执行：
 
 ```powershell
@@ -65,7 +69,7 @@ Codex 的 `installedPath` 是受客户端管理的插件副本。不要修改它
 }
 ```
 
-Windows 路径在 JSON 中需要双反斜杠，或使用正斜杠。客户端须能找到 `python`；也可将 `command` 改为 Python 可执行文件的绝对路径。启动脚本自动使用项目内的 `.venv`，将插件目录设为配置基准；所有日志写入 stderr，stdout 只传输 MCP 协议。重载插件后，客户端应发现 `source_status`、`broad_search` 和 `fetch_page` 等工具。验证命令：
+Windows 路径在 JSON 中需要双反斜杠，或使用正斜杠。客户端须能找到 `python`；也可将 `command` 改为 Python 可执行文件的绝对路径。启动脚本自动选择项目内的开发 `.venv` 或共享 `.venv`，并使用对应的配置目录；所有日志写入 stderr，stdout 只传输 MCP 协议。重载插件后，客户端应发现 `source_status`、`broad_search` 和 `fetch_page` 等工具。验证命令：
 
 ```powershell
 .\.venv\Scripts\python.exe .\scripts\smoke_mcp.py
@@ -78,6 +82,14 @@ Windows 路径在 JSON 中需要双反斜杠，或使用正斜杠。客户端须
 > 广泛搜索最近 AI 视频生成有哪些机会，读取关键原始来源，附上引用，并说明本次覆盖了哪些平台。
 
 > 去 Reddit 和 X 查这个问题；若平台访问未配置，说明缺口并继续搜索能用的来源。
+
+## 在 ChatGPT 网页端使用
+
+网页端需要先建立 MCP 连接，再使用完整插件。可将服务器另行部署为可访问的 HTTPS Streamable HTTP MCP 服务，并配置相应鉴权；也可通过 Secure MCP Tunnel 连接运行在本机的服务器。具体要求见[官方连接与测试文档](https://developers.openai.com/plugins/deploy/connect-chatgpt)及[Secure MCP Tunnel 文档](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)。
+
+现有本地服务器入口是 `scripts/run_server.py`，启动命令为 `python scripts/run_server.py`。选择隧道方案时，用这个已有的 stdio 进程作为上游，保留本机 `.env` 和 `config.yaml`，或使用前述共享配置目录。选择托管方案时，需另外提供 HTTP 传输、部署和鉴权，把所需凭证配置在服务器运行环境中。凭证不应放入上传 ZIP。
+
+当前仓库提供本地服务器源码和插件包，尚未提供已部署的 HTTPS 地址、已建立的隧道或已注册的 ChatGPT MCP 连接。完成连接并验证工具发现、来源状态和一次实际搜索后，才能确认网页端可用；仅上传当前 ZIP 不能完成这些步骤。
 
 ## 配置与可用性
 
