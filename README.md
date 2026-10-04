@@ -4,9 +4,17 @@
 
 支持 YouTube、Reddit、X / Twitter、Bilibili、Douyin、Brave Search、SearXNG、Exa、Tavily、Serper 和 SerpAPI 共 11 个适配器。只有配置完整且通过可用性检查的数据源才会调用；缺少其中一个来源不会让整项研究中断。插件本身不需要 LLM API Key，也不会购买搜索服务或自动创建平台账户。
 
+## Codex 一键安装与重启
+
+Windows 用户优先查看 [安装与重启说明](安装与重启说明.md)。解压 Codex 版 ZIP，双击 `安装到Codex.cmd`，即可安装稳定运行环境、保留已有 API 配置并通过 Codex CLI 注册/安装插件。首次安装后重新打开 Codex；之后重启电脑只需打开 Codex，客户端自动启动 MCP，无需隧道或单独终端。
+
+现已支持 TikHub、TikOmni：在 `.env` 中设置 `TIKHUB_API_KEY`、`TIKOMNI_API_KEY`，也兼容已有的 `TikHub_key`、`Itkomni_key`、`TikOmni_key`。平台 `options.provider` 可选 `auto`、`official`、`tikomni`、`tikhub`；auto 优先已配置的官方/公开接口，缺少访问时依次选择 TikOmni、TikHub。一个查询只调用选定的服务，不会默默在不同计费服务之间重试。结果和覆盖报告标明服务，不把第三方 API 说成官方原生搜索。
+
+安装器将当前目录或 `--env-file` 指定文件中的已填写搜索配置合并到共享 `.env` 的空字段，保留已有非空值并只报告冲突的字段名。注册的是过滤后的源码副本，密钥不进入 Codex 插件缓存或 ZIP。命令用法：`python scripts/install_codex.py --env-file "已有配置的绝对路径"`。只准备依赖/配置可加 `--prepare-only`。
+
 ## 快速开始
 
-当前 `deep-websearch-0.1.1.zip` 是面向 Codex 和本地 MCP 客户端的插件包，服务器通过本机 Python 的 stdio 运行。ChatGPT 网页端使用它的搜索工具，还需要单独连接 HTTPS MCP 服务或 Secure MCP Tunnel；上传 ZIP 不会自动部署服务器。接入方法见下方“在 ChatGPT 网页端使用”。
+当前 `deep-websearch-0.2.0.zip` 是面向 Codex 和本地 MCP 客户端的插件包，服务器通过本机 Python 的 stdio 运行。ChatGPT 网页端使用它的搜索工具，还需要单独连接 HTTPS MCP 服务或 Secure MCP Tunnel；上传 ZIP 不会自动部署服务器。接入方法见下方“在 ChatGPT 网页端使用”。
 
 生成交付 ZIP 请使用 `python .\scripts\package_plugin.py`。不要直接压缩整个项目目录，否则会把 `.env`、`.git`、`.venv` 和缓存一起打包。
 
@@ -125,7 +133,7 @@ python .\scripts\chatgpt_tunnel.py doctor --client "C:\Tools\tunnel-client\tunne
 python .\scripts\package_plugin.py --chatgpt-app-id "<已核实的 MCP 应用 ID>"
 ```
 
-这会另建 `deep-websearch-0.1.1-chatgpt.zip`，生成指向该应用的 `.app.json`，保留技能和图标，省略本地启动配置、源码、依赖和凭证；原始清单及常规源码 ZIP 不变。打包器只检查 ID 格式，不能验证账号权限，也不会注册或部署 MCP 服务。完成真实连接与工具测试前，不能据此认定完整网页插件已可用。
+这会另建 `deep-websearch-0.2.0-chatgpt.zip`，生成指向该应用的 `.app.json`，保留技能和图标，省略本地启动配置、源码、依赖和凭证；原始清单及常规源码 ZIP 不变。打包器只检查 ID 格式，不能验证账号权限，也不会注册或部署 MCP 服务。完成真实连接与工具测试前，不能据此认定完整网页插件已可用。
 
 ## 配置与可用性
 

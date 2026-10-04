@@ -10,9 +10,9 @@ import sys
 import venv
 
 if __package__:
-    from .runtime_paths import shared_home, venv_python
+    from .runtime_paths import shared_home, venv_python, remember_shared_home
 else:
-    from runtime_paths import shared_home, venv_python
+    from runtime_paths import shared_home, venv_python, remember_shared_home
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -43,7 +43,7 @@ def main() -> None:
     args = parser.parse_args()
     if sys.version_info < (3, 11):
         raise SystemExit("Python 3.11 or newer is required.")
-    home = shared_home() if args.shared else ROOT
+    home = shared_home().resolve() if args.shared else ROOT
     if args.shared:
         home.mkdir(mode=0o700, parents=True, exist_ok=True)
     runtime = home / ".venv"
@@ -58,6 +58,7 @@ def main() -> None:
     subprocess.run([*arguments, target], check=True)
     if args.shared:
         initialize_configs(home)
+        remember_shared_home(home)
         print(f"Ready. Configure API access in: {home / '.env'}")
         print(f"Source settings: {home / 'config.yaml'}")
         print("Existing configuration was preserved; no plugin cache or host settings were changed.")

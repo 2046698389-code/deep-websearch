@@ -72,6 +72,7 @@ def test_cached_launcher_uses_shared_runtime_and_cached_source(tmp_path):
     environment.pop("DEEP_WEBSEARCH_HOME", None)
     environment["LOCALAPPDATA"] = str(storage)
     environment["XDG_DATA_HOME"] = str(storage)
+    environment["DEEP_WEBSEARCH_DATA_HOME"] = str(shared)
     response = subprocess.run(
         [sys.executable, str(scripts / "run_server.py")],
         env=environment, text=True, capture_output=True, timeout=30, check=True,

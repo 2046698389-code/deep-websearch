@@ -6,6 +6,7 @@ from .adapters import build_adapters
 from .config import SOURCE_NAMES
 from .models import AdapterError, SourceState, SourceStatus
 from .notifications import notify_missing
+from .adapters.providers import provider_key
 
 WEB_SOURCES = ("brave", "searxng", "exa", "tavily", "serper", "serpapi")
 PLATFORM_DOMAINS = {"youtube": "youtube.com", "reddit": "reddit.com", "x": "x.com",
@@ -86,6 +87,8 @@ class SearchOrchestrator:
                                                       reason="Adapter initialization failed")
             await asyncio.gather(*(initialize(name) for name in self.adapters))
         return {"sources": [item.model_dump(mode="json") for item in statuses.values()],
+                "providers": [{"provider": name, "configured": bool(provider_key(self.settings.env, name))}
+                              for name in ("tikomni", "tikhub")],
                 "probed": probe, "readiness": "initialization_checked" if probe else "configuration_only",
                 "limitations": ["Initialization may authenticate or establish a public session. Search permission, "
                                  "endpoint access and remaining quota are verified by actual search requests."]}
@@ -116,6 +119,7 @@ class SearchOrchestrator:
         locks = {name: asyncio.Lock() for name in self.adapters}
         stats = {name: {"source": name, "selected": name in selected, "attempted_queries": 0,
                         "successful_queries": 0, "native_successful_queries": 0,
+                        "provider_successful_queries": 0,
                         "raw_results": 0, "fallback_queries": 0}
                  for name in self.adapters}
         start_requests = self.http.request_count
@@ -171,8 +175,10 @@ class SearchOrchestrator:
                         stats[name]["successful_queries"] += 1
                         if log is not None:
                             log["successful_sources"].append(name)
-                        if not target:
+                        if not target and not getattr(self.adapters[name], "provider", None):
                             stats[name]["native_successful_queries"] += 1
+                        elif not target:
+                            stats[name]["provider_successful_queries"] += 1
                         for result in results[:per_query_limit]:
                             if not canonical_url(result.url):
                                 continue
@@ -183,7 +189,10 @@ class SearchOrchestrator:
                                 effective_query = query
                             result.query = effective_query
                             record = {"source": name, "query": effective_query,
-                                      "method": "web_index_fallback" if target else "native_search"}
+                                      "method": "web_index_fallback" if target else result.metadata.get(
+                                          "search_method", "native_search")}
+                            if result.metadata.get("provider"):
+                                record["provider"] = result.metadata["provider"]
                             if effective_query != query:
                                 record["planned_query"] = query
                             if target:
@@ -246,7 +255,10 @@ class SearchOrchestrator:
         for name, item in stats.items():
             status = statuses[name]
             coverage_sources.append({**item, "status": status.status.value, "reason": status.reason,
+                                     "provider": getattr(self.adapters[name], "provider", "official_or_public"),
                                      "searched": bool(item["successful_queries"]),
+                                     "platform_search_completed": bool(item["native_successful_queries"] or
+                                                                       item["provider_successful_queries"]),
                                      "native_search_completed": bool(item["native_successful_queries"])})
         not_searched = [{"source": name, "status": statuses[name].status.value,
                         "reason": statuses[name].reason or "No query executed within research budget"}

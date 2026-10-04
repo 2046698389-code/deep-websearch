@@ -19,6 +19,7 @@ class HttpClient:
         self.client = httpx.AsyncClient(
             timeout=search.timeout_seconds if search else 20,
             transport=transport, follow_redirects=False,
+            proxy=settings.env.get("DEEP_WEBSEARCH_HTTP_PROXY") or None if settings else None,
             headers={"User-Agent": "deep-websearch/0.1 (+https://github.com/2046698389-code/deep-websearch)"},
         )
 

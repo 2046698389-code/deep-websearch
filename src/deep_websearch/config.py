@@ -9,6 +9,11 @@ import yaml
 SOURCE_NAMES = ("youtube", "reddit", "x", "bilibili", "douyin", "brave", "searxng",
                 "exa", "tavily", "serper", "serpapi")
 
+CREDENTIAL_ALIASES = {
+    "TIKHUB_API_KEY": ("TikHub_key", "TIKHUB_KEY"),
+    "TIKOMNI_API_KEY": ("Itkomni_key", "TikOmni_key", "TIKOMNI_KEY"),
+}
+
 
 class SourceConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -23,7 +28,7 @@ class SearchConfig(BaseModel):
     max_results: int = Field(default=200, ge=1, le=1000)
     per_query_limit: int = Field(default=10, ge=1, le=50)
     concurrency: int = Field(default=4, ge=1, le=16)
-    timeout_seconds: float = Field(default=20, ge=1, le=120)
+    timeout_seconds: float = Field(default=45, ge=1, le=120)
     max_requests: int = Field(default=200, ge=1, le=1000)
     retries: int = Field(default=1, ge=0, le=3)
 
@@ -68,4 +73,12 @@ def load_settings(config_path: str | Path | None = None, env_file: str | Path | 
     # Existing process environment wins; credentials never enter model_dump or reports.
     values = {k: v for k, v in dotenv_values(env_path).items() if v is not None} if env_path.is_file() else {}
     values.update(os.environ)
+    for canonical, aliases in CREDENTIAL_ALIASES.items():
+        names = (canonical, *aliases)
+        # A process alias overrides a file canonical name, just like normal env values.
+        value = next((os.environ[n] for n in names if os.environ.get(n, "").strip()), None)
+        if value is None:
+            value = next((values[n] for n in names if values.get(n, "").strip()), "")
+        if value:
+            values[canonical] = value.strip()
     return Settings(**data, env=values)

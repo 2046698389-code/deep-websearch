@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ROOT_FILES = {
     "plugin.json", "mcp.json", ".mcp.json", "README.md", "LICENSE", "pyproject.toml",
     "config.example.yaml", ".env.example", ".gitignore", "requirements.txt",
+    "安装到Codex.cmd", "检查搜索配置.cmd", "安装与重启说明.md",
 }
 DIRECTORIES = {
     "src", "skills", "scripts", "assets", "tests", "docs", ".codex-plugin", ".github", ".agents"
